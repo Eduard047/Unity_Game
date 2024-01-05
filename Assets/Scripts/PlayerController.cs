@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-
     Rigidbody2D rb;
     float xInput;
     public float speed;
@@ -14,6 +13,8 @@ public class PlayerController : MonoBehaviour
     public float jumpForce;
     Animator anim;
     bool doubleJump = true;
+    public float groundDistance = 0.4f;
+    public LayerMask groundMask;
 
     private void Awake()
     {
@@ -21,37 +22,30 @@ public class PlayerController : MonoBehaviour
         anim = GetComponent<Animator>();
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
     void Update()
     {
         xInput = Input.GetAxisRaw("Horizontal");
 
         rb.velocity = new Vector2(xInput * speed, rb.velocity.y);
 
-
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.1f, groundLayer);
-
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundDistance, groundLayer);
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
             if (isGrounded)
             {
-                //make it jump
                 Jump();
             }
             else
             {
                 if (doubleJump)
                 {
-                    //Jump();
-                    DoubleJump();
-                    doubleJump = false;
+                    // Добавлена проверка на землю перед выполнением второго прыжка
+                    if (Physics2D.OverlapCircle(groundCheck.position, groundDistance, groundLayer))
+                    {
+                        DoubleJump();
+                        doubleJump = false;
+                    }
                 }
             }
         }
@@ -74,16 +68,16 @@ public class PlayerController : MonoBehaviour
 
     void DoubleJump()
     {
-        rb.velocity = new Vector2(rb.velocity.x, jumpForce/2);
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce / 2);
     }
 
     void CheckDirection()
     {
-        if(rb.velocity.x < 0)
+        if (rb.velocity.x < 0)
         {
             GetComponent<SpriteRenderer>().flipX = true;
         }
-        else if(rb.velocity.x > 0)
+        else if (rb.velocity.x > 0)
         {
             GetComponent<SpriteRenderer>().flipX = false;
         }
