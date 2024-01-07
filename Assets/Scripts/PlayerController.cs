@@ -1,85 +1,93 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    Rigidbody2D rb;
-    float xInput;
-    public float speed;
-    bool isGrounded;
-    public Transform groundCheck;
-    public LayerMask groundLayer;
-    public float jumpForce;
-    Animator anim;
-    bool doubleJump = true;
-    public float groundDistance = 0.4f;
-    public LayerMask groundMask;
+    [SerializeField] private float speed;
+    [SerializeField] private float jumpForce;
+    [SerializeField] private float doubleJumpForce;
+    [SerializeField] private float tripleJumpForce;
+    [SerializeField] private float fallDeathHeight = -10f;
+    private Rigidbody2D body;
+    private Animator anim;
+    private bool grounded;
+    private int remainingJumps;
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        body = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
+        remainingJumps = 3; // Изменено на 3 для максимального количества прыжков
     }
 
-    void Update()
+    private void Update()
     {
-        xInput = Input.GetAxisRaw("Horizontal");
+        float horizontalInput = Input.GetAxis("Horizontal");
+        body.velocity = new Vector2(horizontalInput * speed, body.velocity.y);
 
-        rb.velocity = new Vector2(xInput * speed, rb.velocity.y);
+        // Flip player when facing left/right.
+        if (horizontalInput > 0.01f)
+            transform.localScale = Vector3.one;
+        else if (horizontalInput < -0.01f)
+            transform.localScale = new Vector3(-1, 1, 1);
 
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundDistance, groundLayer);
+        // Check if the player is falling below the death height.
+        if (transform.position.y < fallDeathHeight)
+        {
+            Die();
+        }
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (isGrounded)
-            {
-                Jump();
-            }
-            else
-            {
-                if (doubleJump)
-                {
-                    // Добавлена проверка на землю перед выполнением второго прыжка
-                    if (Physics2D.OverlapCircle(groundCheck.position, groundDistance, groundLayer))
-                    {
-                        DoubleJump();
-                        doubleJump = false;
-                    }
-                }
-            }
+            if (grounded)
+                Jump(jumpForce);
+            else if (remainingJumps > 0)
+                Jump(doubleJumpForce);
+            else if (remainingJumps == 0)
+                Jump(tripleJumpForce);
         }
 
-        if (isGrounded)
+        // Sets animation parameters.
+        anim.SetBool("run", Mathf.Abs(horizontalInput) > 0.01f);
+        anim.SetBool("grounded", grounded);
+    }
+
+    private void Jump(float jumpForce)
+    {
+        body.velocity = new Vector2(body.velocity.x, 0);
+        body.AddForce(new Vector2(0, jumpForce), ForceMode2D.Impulse);
+        anim.SetTrigger("jump");
+        grounded = false;
+        remainingJumps--;
+
+        if (remainingJumps < 0)
+            remainingJumps = 0;
+    }
+
+    private void Die()
+    {
+        // Можете добавить здесь код, который будет выполняться при смерти персонажа.
+        // Пример: Перезапуск уровня
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        // Сброс количества прыжков
+        remainingJumps = 3; // или любое другое начальное значение
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.tag == "Ground")
         {
-            doubleJump = true;
+            grounded = true;
+            remainingJumps = 3; // Восстановление доступных прыжков при касании земли
         }
-
-        anim.SetBool("isGrounded", isGrounded);
-        anim.SetFloat("speed", Mathf.Abs(rb.velocity.x));
-
-        CheckDirection();
     }
 
-    void Jump()
+    private void OnCollisionExit2D(Collision2D collision)
     {
-        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-    }
-
-    void DoubleJump()
-    {
-        rb.velocity = new Vector2(rb.velocity.x, jumpForce / 2);
-    }
-
-    void CheckDirection()
-    {
-        if (rb.velocity.x < 0)
+        if (collision.gameObject.tag == "Ground")
         {
-            GetComponent<SpriteRenderer>().flipX = true;
-        }
-        else if (rb.velocity.x > 0)
-        {
-            GetComponent<SpriteRenderer>().flipX = false;
+            grounded = false;
         }
     }
 }
