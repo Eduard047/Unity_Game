@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
@@ -12,6 +13,7 @@ public class PlayerController : MonoBehaviour
     private Animator anim;
     private bool grounded;
     private int remainingJumps;
+    private bool hasStartedMoving = false;
 
     private void Awake()
     {
@@ -30,7 +32,8 @@ public class PlayerController : MonoBehaviour
             transform.localScale = Vector3.one;
         else if (horizontalInput < -0.01f)
             transform.localScale = new Vector3(-1, 1, 1);
-
+        
+        
         // Check if the player is falling below the death height.
         if (transform.position.y < fallDeathHeight)
         {
@@ -66,18 +69,31 @@ public class PlayerController : MonoBehaviour
 
     private void Die()
     {
-        // Можете добавить здесь код, который будет выполняться при смерти персонажа.
-        // Пример: Перезапуск уровня
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        DieCoroutine();
 
-        // Сброс количества прыжков
-        remainingJumps = 3; // или любое другое начальное значение
+        Health playerHealth = GetComponent<Health>();
+        if (playerHealth != null)
+        {
+            playerHealth.Respawn();
+        }
+    }
+
+    private IEnumerator DieCoroutine()
+    {
+        AudioManager.instance.PlayPlayerDeathSound();
+
+        yield return new WaitForSeconds(1.3f);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.tag == "Ground")
         {
+            if (!hasStartedMoving) 
+            {
+                hasStartedMoving = true;
+                AudioManager.instance.PlayGameStartSound();
+            }
             grounded = true;
             remainingJumps = 3; // Восстановление доступных прыжков при касании земли
         }
@@ -89,5 +105,10 @@ public class PlayerController : MonoBehaviour
         {
             grounded = false;
         }
+    }
+
+    public bool canAttack() 
+    {
+        return grounded;
     }
 }

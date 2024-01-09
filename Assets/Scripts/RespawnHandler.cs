@@ -12,7 +12,7 @@ public class RespawnHandler : MonoBehaviour
             if (playerHealth != null)
             {
                 playerHealth.Respawn();
-            }
+            }            
         }
     }
 }

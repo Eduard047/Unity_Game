@@ -4,7 +4,7 @@ using System.Collections;
 public class Health : MonoBehaviour
 {
     [Header("Health")]
-    [SerializeField] private float startingHealth;
+    [SerializeField] private float startingHealth = 3.0f;
     public float currentHealth { get; private set; }
     private Animator anim;
     private bool dead;
@@ -15,6 +15,9 @@ public class Health : MonoBehaviour
     private SpriteRenderer spriteRenderer;
 
     private Vector3 initialPosition; // Store the initial position for respawn
+
+    [Header("Components")]
+    [SerializeField] private Behaviour[] components;
 
     private void Awake()
     {
@@ -38,9 +41,16 @@ public class Health : MonoBehaviour
             if (!dead)
             {
                 anim.SetTrigger("die");
-                GetComponent<PlayerController>().enabled = false;
+
+                //Deactivate all attached component classes
+                foreach (Behaviour component in components)
+                    component.enabled = false;
+
+
                 dead = true;
                 StartCoroutine(RespawnCoroutine());
+
+                AudioManager.instance.PlayEnemyDeathSound();
             }
         }
     }
@@ -71,10 +81,30 @@ public class Health : MonoBehaviour
 
     private IEnumerator RespawnCoroutine()
     {
-        yield return new WaitForSeconds(2f);
+        AudioManager.instance.PlayPlayerDeathSound();
+        yield return new WaitForSeconds(0.5f);
         currentHealth = startingHealth;
         transform.position = initialPosition;
-        GetComponent<PlayerController>().enabled = true;
-        dead = false;
+
+        if (GetComponent<PlayerController>() != null) {
+            GetComponent<PlayerController>().enabled = true;
+            dead = false;
+        }
+
+    // float timer = 0f;
+    // while (timer < 2f)
+    // {
+    //     timer += Time.deltaTime;
+    //     yield return null;
+    // }
+
+    // currentHealth = startingHealth;
+    // transform.position = initialPosition;
+
+    // if (GetComponent<PlayerController>() != null) 
+    // {
+    //     GetComponent<PlayerController>().enabled = true;
+    //     dead = false;
+    // }
     }
 }
